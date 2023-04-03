@@ -5,7 +5,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-void listRec(const char *path,int rec,int filt_size,int filt_name)
+void listRec(const char *path,int rec,int filt_size,int filt_name,off_t fsize,char* fstring)
 {
     DIR *dir = NULL;
     struct dirent *entry = NULL;
@@ -21,10 +21,18 @@ void listRec(const char *path,int rec,int filt_size,int filt_name)
         if(strcmp(entry->d_name, ".") != 0 && strcmp(entry->d_name, "..") != 0) {
             snprintf(fullPath, 512, "%s/%s", path, entry->d_name);
             if(lstat(fullPath, &statbuf) == 0) {
-                printf("%s\n", fullPath);
+            	if(filt_name==0)
+                	printf("%s\n", fullPath);
+                else{
+                	if(strstr(entry->d_name,fstring)){
+                		char* ss=strstr(entry->d_name,fstring);
+                		if(strcmp(ss,fstring)==0)
+                			printf("%s\n", fullPath);
+                		}
+                }
                 	if(S_ISDIR(statbuf.st_mode)) {
                 		if(rec==1){
-                    		listRec(fullPath,rec,filt_size,filt_name);
+                    		listRec(fullPath,rec,filt_size,filt_name,fsize,fstring);
                 		}
                 	}
                 	//else if(S_ISREG(statbuf.st_mode)){
@@ -83,9 +91,10 @@ int main(int argc, char **argv){
 		fullPath=p;
 		//printf("full path : %s \n",fullPath);
 		i_path=0;
+		off_t dim_reg;
 		if(filt_size!=0){
-			//int dim_reg;
-			char sep[]="=";
+			
+			//char sep[]="=";
 			char * d = strtok(argv[filt_size] , sep);
 			while(d != NULL && i_path<1)
 			{
@@ -93,11 +102,25 @@ int main(int argc, char **argv){
     				//printf("%s \n",p);
     				d = strtok(NULL , sep);
 			}
-			//dim_reg=(int)d;
-			//printf("%d %s\n",dim_reg,d);
+			dim_reg=(off_t)(d-'0');
+			//int dd=strlen(d);
+			//printf("%lo %s %d\n",dim_reg,d,dd);
 		}
-		
-		listRec(fullPath,rec,filt_size,filt_name);
+		i_path=0;
+		char* end_name;
+		if(filt_name!=0){
+			
+			char * d = strtok(argv[filt_name] , sep);
+			while(d != NULL && i_path<1)
+			{
+				i_path=i_path+1;
+    				//printf("%s \n",p);
+    				d = strtok(NULL , sep);
+			}
+			end_name=d;
+			//printf("%s\n",end_name);
+		}
+		listRec(fullPath,rec,filt_size,filt_name,dim_reg,end_name);
 		
     	}
 
