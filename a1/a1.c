@@ -4,6 +4,7 @@
 #include <dirent.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <stdlib.h>
 
 void listRec(const char *path,int rec,int filt_size,int filt_name,off_t fsize,char* fstring)
 {
@@ -17,27 +18,40 @@ void listRec(const char *path,int rec,int filt_size,int filt_name,off_t fsize,ch
         perror("Could not open directory");
         return;
     }
+    
     while((entry = readdir(dir)) != NULL) {
+    
         if(strcmp(entry->d_name, ".") != 0 && strcmp(entry->d_name, "..") != 0) {
+        
             snprintf(fullPath, 512, "%s/%s", path, entry->d_name);
+            
             if(lstat(fullPath, &statbuf) == 0) {
-            	if(filt_name==0)
+            
+            	if(filt_name==0 && filt_size==0)
                 	printf("%s\n", fullPath);
-                else{
+                else if(filt_name!=0){
+                
                 	if(strstr(entry->d_name,fstring)){
+                	
                 		char* ss=strstr(entry->d_name,fstring);
                 		if(strcmp(ss,fstring)==0)
                 			printf("%s\n", fullPath);
                 		}
-                }
+                	}
+                	
+                	else if(filt_size!=0){
+                	
+                		if(S_ISREG(statbuf.st_mode)){
+                			if(statbuf.st_size<=fsize)
+                				printf("%s\n", fullPath);
+                		}
+                	}
                 	if(S_ISDIR(statbuf.st_mode)) {
+                	
                 		if(rec==1){
                     		listRec(fullPath,rec,filt_size,filt_name,fsize,fstring);
                 		}
                 	}
-                	//else if(S_ISREG(statbuf.st_mode)){
-                		
-                	//}
             }
         }
     }
@@ -91,20 +105,29 @@ int main(int argc, char **argv){
 		fullPath=p;
 		//printf("full path : %s \n",fullPath);
 		i_path=0;
-		off_t dim_reg;
+		off_t dim_reg=0;
 		if(filt_size!=0){
-			
-			//char sep[]="=";
-			char * d = strtok(argv[filt_size] , sep);
-			while(d != NULL && i_path<1)
-			{
-				i_path=i_path+1;
-    				//printf("%s \n",p);
-    				d = strtok(NULL , sep);
+			char* s=argv[filt_size];
+			int ns=strlen(s);
+			char* t=(char*)malloc(ns*sizeof(char));
+			int nt=0;
+			//printf("%s %s %d\n",s,t,ns);
+			int ks=0;
+			for(ks=0;ks<ns;ks++){
+				
+				if(strchr("0123456789",s[ks])){
+
+					t[nt]=s[ks];
+					nt=nt+1;
+				}
 			}
-			dim_reg=(off_t)(d-'0');
-			//int dd=strlen(d);
-			//printf("%lo %s %d\n",dim_reg,d,dd);
+			t[nt]='\0';
+
+			dim_reg=atoi(t);
+			free(t);
+			//printf("%s %s %ld\n",s,t,dim_reg);
+
+			
 		}
 		i_path=0;
 		char* end_name;
