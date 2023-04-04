@@ -5,6 +5,8 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 
 void listRec(const char *path,int rec,int filt_size,int filt_name,off_t fsize,char* fstring)
 {
@@ -57,6 +59,126 @@ void listRec(const char *path,int rec,int filt_size,int filt_name,off_t fsize,ch
     }
     closedir(dir);
 }
+
+void listSF(const char *path)
+{
+	int fd=-1;
+	int ok=1;
+	char magic[4];
+	int header_sz=0;
+	int version=0;
+	int nsections=0;
+	char** name_sect;
+	int* type_sect;
+	int* size_sect;
+	//off_t* off_sect;
+	char name[8];
+	int type=0;
+	int sizesec=0;
+	//off_t offsec=0;
+	fd=open(path,O_RDONLY);
+	if(fd==-1){
+		perror("Could not open input file");
+		return;
+	}
+	lseek(fd,-4,SEEK_END);
+	if(read(fd,magic,4)!=4){
+		perror("reading magic error!");
+		return;
+	}
+	else{
+		if(strcmp(magic,"E7pu")<0){
+			ok=0;
+			printf("magic= %s\n",magic);
+			perror("wrong magic");
+			return;
+		}
+		//else printf("magic= %s\n",magic);
+	}
+	
+	lseek(fd,-6,SEEK_END);
+	if(read(fd,&header_sz,2)!=2){
+		ok=0;
+		perror("reading headers size error!");
+		return;
+	}
+	/*else{
+		header_sz=(int)headerss[0];
+		printf("header size= %d \n",header_sz);
+	}*/
+	lseek(fd,-header_sz,SEEK_END);
+	if(read(fd,&version,2)!=2){
+		perror("reading versions error!");
+		return;
+	}
+	else{
+		//version=(int)versionss[0];
+		//printf("version=%d\n",version);
+		if(!(version>=82 && version<=146)){
+			ok=0;
+			perror("wrong version");
+			return;
+		}
+	}
+	if(read(fd,&nsections,1)!=1){
+		perror("reading nr sections error!");
+		return;
+	}
+	else{
+		//nsections=(int)nsectss[0];
+		//printf("nr_sections=%d\n",nsections);
+		if(!(nsections>=2 && nsections<=15)){
+			ok=0;
+			perror("wrong nsections");
+			return;
+		}
+		else{
+			name_sect=(char**)calloc(nsections,sizeof(char*));
+			for(int secti=0;secti<nsections;secti++)
+				name_sect[secti]=(char*)calloc(8,sizeof(char));
+			type_sect=(int*)calloc(nsections,sizeof(int));
+			size_sect=(int*)calloc(nsections,sizeof(int));
+			//off_sect=(off_t*)calloc(nsections,sizeof(off_t));
+			for(int h=0;h<nsections;h++){
+				if(read(fd,name,8)!=8)
+					return;
+				if(read(fd,&type,1)!=1)
+					return;
+				//if(read(fd,&offsec,4)!=4)
+				//	return;
+				lseek(fd,4,SEEK_CUR);
+				if(read(fd,&sizesec,4)!=4)
+					return;
+				if(type!=10 && type!=70 && type!=30 && type!=66)
+					ok=0;
+
+				strcpy(name_sect[h],name);
+				type_sect[h]=type;
+				size_sect[h]=sizesec;
+				//off_sect=offsec;
+
+			}
+			
+		}
+	}
+
+	if(ok==1){
+		printf("version=%d\n",version);
+		printf("nr_sections=%d\n",nsections);
+		for(int h=0;h<nsections;h++){
+			printf("section%d: %s %d %d\n",h+1,name_sect[h],type_sect[h],size_sect[h]);
+		}
+	}
+	free(type_sect);
+	free(size_sect);
+	for(int secti=0;secti<nsections;secti++)
+		free(name_sect[secti]);
+	free(name_sect);	
+
+}
+
+
+
 int main(int argc, char **argv){
     if(argc >= 2){
         if(strcmp(argv[1], "variant") == 0){
@@ -66,7 +188,8 @@ int main(int argc, char **argv){
 
     if(argc >= 3){
     	int i=1;
-    	int rec=0,filt_size=0,filt_name=0,listare=0,f_path=0,i_path=0;
+    	int rec=0,filt_size=0,filt_name=0,listare=0,f_path=0,i_path=0;//flags pt listare
+    	int parsare=0;//flags pt parsare
     	char* fullPath;
     	f_path=0;
    	rec=0;
@@ -76,6 +199,9 @@ int main(int argc, char **argv){
     	for(i=1;i<argc;i++){
     		if(strcmp(argv[i], "list") ==0){
     			listare=1;
+    		}
+    		if(strcmp(argv[i], "parse") ==0){
+    			parsare=1;
     		}
     		if(strcmp(argv[i],"recursive")==0){
     			rec=1;
@@ -88,12 +214,11 @@ int main(int argc, char **argv){
     		}
     		if(strstr(argv[i],"path=")!=NULL){
     			f_path=i;
-    		}	
+    		}
+    			
     	}
     	//printf("%d %d %d %d \n",listare,rec,filt_size,filt_name);
-    	if(f_path!=0 && listare==1){
-    		//printf("%s \n",argv[f_path]);
-    		printf("SUCCESS \n");
+    	if(f_path!=0){
     		char sep[]="=";
 		char * p = strtok(argv[f_path] , sep);
 		while(p != NULL && i_path<1)
@@ -103,6 +228,10 @@ int main(int argc, char **argv){
     			p = strtok(NULL , sep);
 		}
 		fullPath=p;
+    		if( listare==1){
+    		//printf("%s \n",argv[f_path]);
+    		printf("SUCCESS \n");
+    		
 		//printf("full path : %s \n",fullPath);
 		i_path=0;
 		off_t dim_reg=0;
@@ -145,9 +274,16 @@ int main(int argc, char **argv){
 		}
 		listRec(fullPath,rec,filt_size,filt_name,dim_reg,end_name);
 		
-    	}
+    	}//end listare
+    	else if(parsare==1){
+    		printf("SUCCESS \n");
+    		listSF(fullPath);
+    		
+    	}//end parsare
+    	
+    	}//end f_path!=0
 
-    }
+    }//end argc>=3
     
     return 0;
 }
