@@ -64,7 +64,7 @@ void listSF(const char *path)
 {
 	int fd=-1;
 	int ok=1;
-	char magic[4];
+	char magic[5];
 	int header_sz=0;
 	int version=0;
 	int nsections=0;
@@ -72,7 +72,7 @@ void listSF(const char *path)
 	int* type_sect;
 	int* size_sect;
 	//off_t* off_sect;
-	char name[8];
+	char name[9];
 	int type=0;
 	int sizesec=0;
 	//off_t offsec=0;
@@ -87,7 +87,8 @@ void listSF(const char *path)
 		return;
 	}
 	else{
-		if(strcmp(magic,"E7pu")<0){
+		magic[5]='\0';
+		if(strcmp(magic,"E7pu")!=0){
 			ok=0;
 			printf("magic= %s\n",magic);
 			perror("wrong magic");
@@ -135,13 +136,15 @@ void listSF(const char *path)
 		else{
 			name_sect=(char**)calloc(nsections,sizeof(char*));
 			for(int secti=0;secti<nsections;secti++)
-				name_sect[secti]=(char*)calloc(8,sizeof(char));
+				name_sect[secti]=(char*)calloc(9,sizeof(char));
 			type_sect=(int*)calloc(nsections,sizeof(int));
 			size_sect=(int*)calloc(nsections,sizeof(int));
 			//off_sect=(off_t*)calloc(nsections,sizeof(off_t));
 			for(int h=0;h<nsections;h++){
 				if(read(fd,name,8)!=8)
 					return;
+				else
+					name[9]='\0';
 				if(read(fd,&type,1)!=1)
 					return;
 				//if(read(fd,&offsec,4)!=4)
