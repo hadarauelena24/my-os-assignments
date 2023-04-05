@@ -169,13 +169,12 @@ void listSF(const char *path)
 		printf("nr_sections=%d\n",nsections);
 		for(int h=0;h<nsections;h++){
 			printf("section%d: %s %d %d\n",h+1,name_sect[h],type_sect[h],size_sect[h]);
+			}
 		free(type_sect);
 		free(size_sect);
 		for(int secti=0;secti<nsections;secti++)
 			free(name_sect[secti]);
 		free(name_sect);
-		}
-		
 	}
 	else if(ok==0)
 		printf("ERROR\nwrong magic\n");
