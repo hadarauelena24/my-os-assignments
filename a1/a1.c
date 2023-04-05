@@ -177,7 +177,7 @@ void listSF(const char *path)
 	for(int secti=0;secti<nsections;secti++)
 		free(name_sect[secti]);
 	free(name_sect);	
-
+	close(fd);
 }
 
 
