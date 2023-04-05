@@ -90,19 +90,16 @@ void listSF(const char *path)
 		magic[5]='\0';
 		if(strcmp(magic,"E7pu")!=0){
 			ok=0;
-			printf("magic= %s\n",magic);
-			perror("wrong magic");
-			return;
 		}
 		//else printf("magic= %s\n",magic);
 	}
-	
+	if(ok==1){
 	lseek(fd,-6,SEEK_END);
 	if(read(fd,&header_sz,2)!=2){
-		ok=0;
 		perror("reading headers size error!");
 		return;
 	}
+	
 	/*else{
 		header_sz=(int)headerss[0];
 		printf("header size= %d \n",header_sz);
@@ -116,11 +113,11 @@ void listSF(const char *path)
 		//version=(int)versionss[0];
 		//printf("version=%d\n",version);
 		if(!(version>=82 && version<=146)){
-			ok=0;
-			perror("wrong version");
-			return;
+			ok=-1;
 		}
 	}
+	}
+	if(ok==1){
 	if(read(fd,&nsections,1)!=1){
 		perror("reading nr sections error!");
 		return;
@@ -128,12 +125,12 @@ void listSF(const char *path)
 	else{
 		//nsections=(int)nsectss[0];
 		//printf("nr_sections=%d\n",nsections);
+		
 		if(!(nsections>=2 && nsections<=15)){
-			ok=0;
-			perror("wrong nsections");
-			return;
-		}
-		else{
+			ok=-2;
+			
+		}}}
+	if(ok==1){
 			name_sect=(char**)calloc(nsections,sizeof(char*));
 			for(int secti=0;secti<nsections;secti++)
 				name_sect[secti]=(char*)calloc(9,sizeof(char));
@@ -153,7 +150,7 @@ void listSF(const char *path)
 				if(read(fd,&sizesec,4)!=4)
 					return;
 				if(type!=10 && type!=70 && type!=30 && type!=66)
-					ok=0;
+					ok=-3;
 
 				strcpy(name_sect[h],name);
 				type_sect[h]=type;
@@ -163,20 +160,38 @@ void listSF(const char *path)
 			}
 			
 		}
-	}
+	
+	
 
 	if(ok==1){
+		printf("SUCCESS\n");
 		printf("version=%d\n",version);
 		printf("nr_sections=%d\n",nsections);
 		for(int h=0;h<nsections;h++){
 			printf("section%d: %s %d %d\n",h+1,name_sect[h],type_sect[h],size_sect[h]);
+		free(type_sect);
+		free(size_sect);
+		for(int secti=0;secti<nsections;secti++)
+			free(name_sect[secti]);
+		free(name_sect);
 		}
+		
 	}
-	free(type_sect);
-	free(size_sect);
-	for(int secti=0;secti<nsections;secti++)
-		free(name_sect[secti]);
-	free(name_sect);	
+	else if(ok==0)
+		printf("ERROR\nwrong magic\n");
+	else if(ok==-1)
+		printf("ERROR\nwrong version\n");
+	else if(ok==-2)
+		printf("ERROR\nwrong sect_nr\n");
+	else if(ok==-3){
+			printf("ERROR\nwrong sect_types\n");
+			free(type_sect);
+			free(size_sect);
+			for(int secti=0;secti<nsections;secti++)
+				free(name_sect[secti]);
+			free(name_sect);
+		}
+	
 	close(fd);
 }
 
@@ -279,7 +294,6 @@ int main(int argc, char **argv){
 		
     	}//end listare
     	else if(parsare==1){
-    		printf("SUCCESS \n");
     		listSF(fullPath);
     		
     	}//end parsare
