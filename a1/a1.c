@@ -85,11 +85,9 @@ void listSF(const char *path,int extractie,int sectiune,int linie)
 	else{
 		magic[4]='\0';
 		if(strcmp(magic,"E7pu")!=0)
-		//if(!(magic[0]=='E' && magic[1]=='7' && magic[2]=='p' && magic[3]=='u'))
 		{
 			ok=0;
 		}
-		//else printf("magic= %s\n",magic);
 	}
 	if(ok==1){
 	lseek(fd,-6,SEEK_END);
@@ -104,8 +102,6 @@ void listSF(const char *path,int extractie,int sectiune,int linie)
 		return;
 	}
 	else{
-		//version=(int)versionss[0];
-		//printf("version=%d\n",version);
 		if(!(version>=82 && version<=146)){
 			ok=-1;
 		}
@@ -117,13 +113,12 @@ void listSF(const char *path,int extractie,int sectiune,int linie)
 		return;
 	}
 	else{
-		//nsections=(int)nsectss[0];
-		//printf("nr_sections=%d\n",nsections);
-
 		if(!(nsections>=2 && nsections<=15)){
 			ok=-2;
 
-		}}}
+		}
+	}
+	}
 	if(ok==1){
 			name_sect=(char**)calloc(nsections,sizeof(char*));
 			for(int secti=0;secti<nsections;secti++)
@@ -144,7 +139,6 @@ void listSF(const char *path,int extractie,int sectiune,int linie)
 					return;
 				if(read(fd,&offsec,4)!=4)
 					return;
-				//lseek(fd,4,SEEK_CUR);
 				if(read(fd,&sizesec,4)!=4)
 					return;
 				if(type!=10 && type!=70 && type!=30 && type!=66)
@@ -193,8 +187,6 @@ void listSF(const char *path,int extractie,int sectiune,int linie)
 	}
 	else{
 		if(ok!=1){
-			printf("magic: %s\n",magic);
-			printf("ok=%d\n",ok);
 			printf("ERROR\ninvalid file\n");
 			if(ok==-3){
 				free(type_sect);
@@ -211,10 +203,11 @@ void listSF(const char *path,int extractie,int sectiune,int linie)
 			else{
 				int nrline=1,ok_line=0;
 				int sizes=size_sect[sectiune-1];
-				char bufsect[sizes];
+				char bufsect[sizes+1];
 				char continut_linie[sizes];
 				lseek(fd,off_sect[sectiune-1],SEEK_SET);
 				read(fd,&bufsect,sizes);
+				bufsect[sizes]='\0';
 				int j=0;
 				for(int i=0;i<sizes;i++){
 					if(bufsect[i]=='\n'){ 
@@ -222,18 +215,15 @@ void listSF(const char *path,int extractie,int sectiune,int linie)
 					}
 					else if(nrline==linie){
 							sprintf((char*)(continut_linie+j),"%c",bufsect[i]);
-							//printf("ala: %s\n",continut_linie);
 							ok_line=1;
 							j++;
 						}
-					
 				}
 				
 				if(ok_line==1)
 					printf("SUCCESS\n%s\n",continut_linie);
 				else	
 					printf("ERROR\ninvalid line\n");
-				
 			}
 
 			free(type_sect);
@@ -249,7 +239,180 @@ void listSF(const char *path,int extractie,int sectiune,int linie)
 	close(fd);
 }
 
+void listRecSF(const char *path)
+{
+    DIR *dir = NULL;
+    struct dirent *entry = NULL;
+    char fullPath[512];
+    struct stat statbuf;
 
+    dir = opendir(path);
+    if(dir == NULL) {
+        perror("Could not open directory");
+        return;
+    }
+    while((entry = readdir(dir)) != NULL) {
+
+        if(strcmp(entry->d_name, ".") != 0 && strcmp(entry->d_name, "..") != 0) {
+
+            snprintf(fullPath, 512, "%s/%s", path, entry->d_name);
+
+            if(lstat(fullPath, &statbuf) == 0) {
+                if(S_ISDIR(statbuf.st_mode)) {
+			listRecSF(fullPath);
+                } 
+		else if(S_ISREG(statbuf.st_mode)){
+			//inceput extract
+			int fd=-1;
+			int ok=1;
+			char magic[5];
+			int header_sz=0;
+			int version=0;
+			int nsections=0;
+			char** name_sect;
+			int* type_sect;
+			int* size_sect;
+			off_t* off_sect;
+			fd=open(fullPath,O_RDONLY);
+			if(fd==-1){//verific daca s-a deschis fisierul
+				perror("Could not open input file");
+				return;
+			}
+			lseek(fd,-4,SEEK_END);
+			
+			if(read(fd,&magic,4)!=4){//citesc cei 4 biti pentru numarul "magic"
+				perror("reading magic error!");
+				return;
+			}
+			else{
+				magic[4]='\0';
+				if(strcmp(magic,"E7pu")!=0){//verific daca numarul magic corespunde cerintei
+					ok=0;
+				}
+			}
+			if(ok==1){
+				lseek(fd,-6,SEEK_END);
+				if(read(fd,&header_sz,2)!=2){//citesc dimensiunea header-ului
+					perror("reading headers size error!");
+					return;
+				}
+				lseek(fd,-header_sz,SEEK_END);//ma deplasez la inceputul header-ului
+				if(read(fd,&version,2)!=2){
+					perror("reading versions error!");
+				return;
+				}
+				else{
+					if(!(version>=82 && version<=146)){
+						ok=-1;
+					}
+				}
+			}
+			if(ok==1){
+				if(read(fd,&nsections,1)!=1){
+					perror("reading nr sections error!");
+					return;
+			}
+				else{
+					if(!(nsections>=2 && nsections<=15)){
+						ok=-2;
+					}
+				}
+			}
+			if(ok==1){
+				name_sect=(char**)calloc(nsections,sizeof(char*));
+				for(int secti=0;secti<nsections;secti++)
+					name_sect[secti]=(char*)calloc(9,sizeof(char));
+				type_sect=(int*)calloc(nsections,sizeof(int));
+				size_sect=(int*)calloc(nsections,sizeof(int));
+				off_sect=(off_t*)calloc(nsections,sizeof(off_t));
+				for(int h=0;h<nsections;h++){
+					char name[9];
+					int type=0;
+					int sizesec=0;
+					off_t offsec=0;
+					if(read(fd,&name,8)!=8)
+						return;
+					else
+						name[8]='\0';
+					if(read(fd,&type,1)!=1)
+						return;
+					if(read(fd,&offsec,4)!=4)
+						return;
+					//lseek(fd,4,SEEK_CUR);
+					if(read(fd,&sizesec,4)!=4)
+						return;
+					if(type!=10 && type!=70 && type!=30 && type!=66)
+						ok=-3;
+																		
+					strcpy(name_sect[h],name);
+					type_sect[h]=type;
+					size_sect[h]=sizesec;
+					off_sect[h]=offsec;
+				}
+			}
+			if(ok==1){
+				int linii_sectiune=0,min13linii=0;
+				char* continut_sectiune;
+				int size_sectiune=0;
+				//printf("vreau nrlinii \n");
+				for(int sc=0;sc<nsections;sc++){
+					linii_sectiune=0;
+					//printf("te \n");
+					size_sectiune=size_sect[sc];
+					//printf("size sec=%d\n",size_sectiune);
+					continut_sectiune=(char*)calloc(size_sectiune+1,sizeof(char));
+					if (continut_sectiune == NULL) {
+      						/* Nu s-a reusit alocarea */
+      						printf("Could not allocate continut_sectiune\n");
+  					}
+					//printf("calc \n");
+					lseek(fd,off_sect[sc],SEEK_SET);
+					//printf("pe \n");
+					read(fd,continut_sectiune,size_sectiune);
+					//printf("nervi  continut_sectiune=%c\n",continut_sectiune[0]);
+					continut_sectiune[size_sectiune]='\0';
+					//printf("!!!!!! \n");
+					for(int sl=0;sl<size_sectiune;sl++)
+						if(continut_sectiune[sl]=='\n')
+							linii_sectiune=linii_sectiune+1;
+					free(continut_sectiune);
+					if(linii_sectiune>=13){
+						min13linii=1;
+						break;
+					}
+				}
+				//printf("am nr linii \n");
+				if(min13linii==1)
+					printf("%s\n", fullPath);
+				free(type_sect);
+				free(size_sect);
+				for(int secti=0;secti<nsections;secti++)
+					free(name_sect[secti]);
+				free(name_sect);
+				free(off_sect);
+			}
+			else{
+				//printf("ERROR\ninvalid file\n");
+				if(ok==-3){
+					free(type_sect);
+					free(size_sect);
+					for(int secti=0;secti<nsections;secti++)
+						free(name_sect[secti]);
+					free(name_sect);
+					free(off_sect);
+				}
+			}
+		
+
+			close(fd);
+			//final extract
+                		//printf("%s\n", fullPath);
+                }      
+        }
+        }
+    }
+    closedir(dir);
+}
 
 int main(int argc, char **argv){
     if(argc >= 2){
@@ -262,7 +425,7 @@ int main(int argc, char **argv){
     	int i=1;
     	int rec=0,filt_size=0,filt_name=0,listare=0,f_path=0,i_path=0;//flags pt listare
     	int parsare=0;//flags pt parsare
-    	int extractie=0,sectiune=0,linie=0;
+    	int extractie=0,sectiune=0,linie=0,gasestetoate=0;
     	char* fullPath;
     	f_path=0;
    	rec=0;
@@ -278,6 +441,9 @@ int main(int argc, char **argv){
     		}
     		if(strcmp(argv[i], "extract") ==0){
     			extractie=1;
+    		}
+    		if(strcmp(argv[i], "findall") ==0){
+    			gasestetoate=1;
     		}
     		if(strcmp(argv[i],"recursive")==0){
     			rec=1;
@@ -403,6 +569,10 @@ int main(int argc, char **argv){
     		listSF(fullPath,extractie,nrsect,nrline);
 
     	}//end extractie
+    	else if(gasestetoate==1){
+    		printf("SUCCESS\n");
+    		listRecSF(fullPath);
+    	}
     	}//end f_path!=0
 
     }//end argc>=3
