@@ -46,9 +46,9 @@ int main()
     TH_STRUCT paramsp3[35];
     TH_STRUCT paramsp5[6];
     //int status[7]= {-1};
-    pthread_t tidp6[5]= {-1};
-    pthread_t tidp3[35]= {-1};
-    pthread_t tidp5[6]= {-1};
+    pthread_t tidp6[5]={0};
+    pthread_t tidp3[35]={0};
+    pthread_t tidp5[6]= {0};
     //pid_t pid[7]= {-1};
     info(BEGIN, 1, 0);
     if(fork()==0)
@@ -60,47 +60,50 @@ int main()
     if(fork()==0)
     {
         info(BEGIN,3,0);
+        
         if(fork()==0)
         {
             info(BEGIN,5,0);
+            
             if(fork()==0)
             {
                 info(BEGIN,6,0);
                 for(int i=0; i<5; i++)
                 {
                     paramsp6[i].id=i+1;
-                    pthread_create(&tidp6[i], NULL, threadFn6, &paramsp6[i]) ;
+                    pthread_create(&tidp6[i], NULL, threadFn6, (void*)&paramsp6[i]);
                 }
                 for(int i=0; i<5; i++)
                 {
-                    pthread_join(tidp6[i], NULL);;
+                    pthread_join(tidp6[i], NULL);
                 }
                 info(END,6,0);
-                for(int i=0; i<6; i++)
-                {
-                    paramsp5[i].id=i+1;
-                    pthread_create(&tidp5[i], NULL, threadFn5, &paramsp5[i]) ;
-                }
-                for(int i=0; i<6; i++)
-                {
-                    pthread_join(tidp5[i], NULL);;
-                }
                 exit(0);
             }
+            for(int i=0; i<6; i++)
+                {
+                    paramsp5[i].id=i+1;
+                    pthread_create(&tidp5[i], NULL, threadFn5, (void*)&paramsp5[i]);
+                }
+                for(int i=0; i<6; i++)
+                {
+                    pthread_join(tidp5[i], NULL);
+                }
             //wait(&status[5]);
             wait(NULL);
-            for(int i=0; i<35; i++)
-            {
-            	paramsp3[i].id=i+1;
-                pthread_create(&tidp3[i], NULL, threadFn3, &paramsp3[i]) ;
-            }
-            for(int i=0; i<35; i++)
-            {
-                pthread_join(tidp3[i], NULL);;
-            }
             info(END,5,0);
             exit(0);
+            
         }
+        for(int i=0; i<35; i++)
+            {
+            	paramsp3[i].id=i+1;
+                pthread_create(&tidp3[i], NULL, threadFn3, (void*)&paramsp3[i]);
+            }
+            for(int i=0; i<35; i++)
+            {
+                pthread_join(tidp3[i], NULL);
+            }
         //wait(&status[4]);
         wait(NULL);
         info(END,3,0);
