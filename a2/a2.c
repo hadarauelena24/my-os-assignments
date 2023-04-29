@@ -5,26 +5,35 @@
 #include "a2_helper.h"
 #include <stdlib.h>
 #include <pthread.h>
+
+typedef struct
+{
+	int id;
+}TH_STRUCT;
+
 void *threadFn6(void *unused)
 {
+    TH_STRUCT *s=(TH_STRUCT*)unused;
     //srand(time(NULL));
-    int nrthr=(int)((long)unused);
+    int nrthr=s->id;
     info(BEGIN,6,nrthr);
     info(END,6,nrthr);
     return NULL;
 }
 void *threadFn3(void *unused)
 {
+    TH_STRUCT *s=(TH_STRUCT*)unused;
     //srand(time(NULL));
-    int nrthr=(int)((long)unused);
+    int nrthr=s->id;
     info(BEGIN,3,nrthr);
     info(END,3,nrthr);
     return NULL;
 }
 void *threadFn5(void *unused)
 {
+   TH_STRUCT *s=(TH_STRUCT*)unused;
     //srand(time(NULL));
-    int nrthr=(int)((long)unused);
+    int nrthr=s->id;
     info(BEGIN,5,nrthr);
     info(END,5,nrthr);
     return NULL;
@@ -33,7 +42,10 @@ void *threadFn5(void *unused)
 int main()
 {
     init();
-    int status[7]= {-1};
+    TH_STRUCT paramsp6[5];
+    TH_STRUCT paramsp3[35];
+    TH_STRUCT paramsp5[6];
+    //int status[7]= {-1};
     pthread_t tidp6[5]= {-1};
     pthread_t tidp3[35]= {-1};
     pthread_t tidp5[6]= {-1};
@@ -56,7 +68,8 @@ int main()
                 info(BEGIN,6,0);
                 for(int i=0; i<5; i++)
                 {
-                    pthread_create(&tidp6[i], NULL, threadFn6, (void*)(long)(i+1)) ;
+                    paramsp6[i].id=i+1;
+                    pthread_create(&tidp6[i], NULL, threadFn6, &paramsp6[i]) ;
                 }
                 for(int i=0; i<5; i++)
                 {
@@ -65,7 +78,8 @@ int main()
                 info(END,6,0);
                 for(int i=0; i<6; i++)
                 {
-                    pthread_create(&tidp5[i], NULL, threadFn5, (void*)(long)(i+1)) ;
+                    paramsp5[i].id=i+1;
+                    pthread_create(&tidp5[i], NULL, threadFn5, &paramsp5[i]) ;
                 }
                 for(int i=0; i<6; i++)
                 {
@@ -73,10 +87,12 @@ int main()
                 }
                 exit(0);
             }
-            wait(&status[5]);
+            //wait(&status[5]);
+            wait(NULL);
             for(int i=0; i<35; i++)
             {
-                pthread_create(&tidp3[i], NULL, threadFn3, (void*)(long)(i+1)) ;
+            	paramsp3[i].id=i+1;
+                pthread_create(&tidp3[i], NULL, threadFn3, &paramsp3[i]) ;
             }
             for(int i=0; i<35; i++)
             {
@@ -85,7 +101,8 @@ int main()
             info(END,5,0);
             exit(0);
         }
-        wait(&status[4]);
+        //wait(&status[4]);
+        wait(NULL);
         info(END,3,0);
         exit(0);
     }
@@ -98,13 +115,17 @@ int main()
             info(END,7,0);
             exit(0);
         }
-        wait(&status[6]);
+        //wait(&status[6]);
+        wait(NULL);
         info(END,4,0);
         exit(0);
     }
-    wait(&status[1]);
-    wait(&status[2]);
-    wait(&status[3]);
+    //wait(&status[1]);
+    //wait(&status[2]);
+    //wait(&status[3]);
+    wait(NULL);
+    wait(NULL);
+    wait(NULL);
     info(END, 1, 0);
     return 0;
 }
