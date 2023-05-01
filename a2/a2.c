@@ -41,8 +41,10 @@ void *threadFn3(void *unused)
     TH_STRUCT *s=(TH_STRUCT*)unused;
     //srand(time(NULL));
     int nrthr=s->id;
+    sem_wait(s->logSem2);
     info(BEGIN,3,nrthr);
     info(END,3,nrthr);
+    sem_post(s->logSem2);
     return NULL;
 }
 
@@ -61,6 +63,13 @@ int main()
     init();
     sem_t logSem2;
     sem_t logSem3;
+
+    sem_t logSemp3;
+    if(sem_init(&logSemp3, 0, 4) != 0)
+    {
+        perror("Could not init the semaphore2");
+        return -1;
+    }
 
     TH_STRUCT paramsp6[5];
     TH_STRUCT paramsp3[35];
@@ -130,6 +139,7 @@ int main()
         for(int i=0; i<35; i++)
         {
             paramsp3[i].id=i+1;
+            paramsp3[i].logSem2=&logSemp3;
             pthread_create(&tidp3[i], NULL, threadFn3, (void*)&paramsp3[i]);
         }
         for(int i=0; i<35; i++)
@@ -163,6 +173,7 @@ int main()
     wait(NULL);
     sem_destroy(&logSem2);
     sem_destroy(&logSem3);
+    sem_destroy(&logSemp3);
     info(END, 1, 0);
     return 0;
 }
