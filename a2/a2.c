@@ -82,12 +82,12 @@ int main()
     }
 
     sem_t* logSemp3dif;
-    //sem_unlink("log_sem_difpro");
+    sem_unlink("log_sem_difpro");
 
     logSemp3dif=sem_open("log_sem_difpro",O_CREAT,0644,0);
 
     sem_t* logSemp3difsf;
-    //sem_unlink("log_sem_difpro_sf");
+    sem_unlink("log_sem_difpro_sf");
 
     logSemp3difsf=sem_open("log_sem_difpro_sf",O_CREAT,0644,0);
 
