@@ -170,7 +170,7 @@ int main()
         {
             pthread_join(tidp3[i], NULL);
         }
-        //wait(&status[4]);
+
         wait(NULL);
         info(END,3,0);
         exit(0);
@@ -184,14 +184,12 @@ int main()
             info(END,7,0);
             exit(0);
         }
-        //wait(&status[6]);
+
         wait(NULL);
         info(END,4,0);
         exit(0);
     }
-    //wait(&status[1]);
-    //wait(&status[2]);
-    //wait(&status[3]);
+
     wait(NULL);
     wait(NULL);
     wait(NULL);
