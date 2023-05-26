@@ -48,7 +48,6 @@ int main()
         perror("ERROR: Cannot write to the response pipe");
         exit(EXIT_FAILURE);
     }
-    //printf("SUCCESS\n");
     int i=0;
     unsigned int dimShm=0;
     int shmFd=-1;
@@ -60,6 +59,7 @@ int main()
     int noSections=0;
     unsigned short hdsz=0;
     unsigned int offsetSection=0;
+    unsigned int sizeSect=0;
     char* data=NULL;
     int sizedata=0;
     int fd=-1;
@@ -80,7 +80,6 @@ int main()
             }
         }
         request='0';
-        //buffer_req[i]='\0';
         if(strcmp(buffer_req,"PING")==0)
         {
             strcpy(buffer_resp,"PING#");
@@ -93,12 +92,6 @@ int main()
             //write(resp_pipe,"PONG#",strlen("PONG#"));
         }
 
-        //strcpy(buffer_resp,"PING 13706 PONG");
-        //write(resp_pipe,&buffer_resp,sizeof(buffer_resp));
-        // Închiderea pipe-urilor
-
-
-        //int fd1=-1;
         if(strcmp(buffer_req,"CREATE_SHM")==0)
         {
             read(req_pipe,&dimShm,sizeof(unsigned int));
@@ -108,6 +101,7 @@ int main()
             {
                 write(resp_pipe,"ERROR#",strlen("ERROR#"));
                 perror("Could not aquire shm");
+                close(shmFd);
                 return 1;
             }
 
@@ -117,6 +111,8 @@ int main()
             if(sharedZone == (void*)-1)
             {
                 perror("Could not map the shared memory");
+                munmap(sharedZone, dimShm);
+                close(shmFd);
                 return 1;
             }
         }
@@ -135,7 +131,6 @@ int main()
             }
             else
             {
-
                 //write(resp_pipe,"WRITE_TO_SHM#",strlen("WRITE_TO_SHM#"));
                 write(resp_pipe,"ERROR#",strlen("ERROR#"));
             }
@@ -167,6 +162,7 @@ int main()
             {
                 write(resp_pipe,"ERROR#",strlen("ERROR#"));
                 perror("Could not map file");
+                munmap(data,sizedata);
                 close(fd);
                 return 1;
             }
@@ -206,13 +202,14 @@ int main()
             if(sectionNo>1 && sectionNo<=noSections)
             {
                 offsetSection=*(unsigned int*)(data+ sizedata-hdsz+3+(sectionNo-1)*17+9);
+                sizeSect=*(unsigned int*)(data+ sizedata-hdsz+3+(sectionNo-1)*17+13);
                 for(int i=0; i<noBSect; i++)
                 {
                     rddatasect[i]=data[offsetSection+offsetSect+i];
                 }
                 rddatasect[noBSect]='\0';
             }
-            if(offsetSection+offsetSect>0 && offsetSection+offsetSect<=sizedata && offsetSection+offsetSect+noBytes<=sizedata)
+            if(offsetSection+offsetSect>0 && offsetSection+offsetSect<=offsetSection+sizeSect && offsetSection+offsetSect+noBytes<=offsetSection+sizeSect)
             {
                 memcpy(sharedZone,&rddatasect,noBSect);
 
@@ -222,8 +219,6 @@ int main()
             {
                 write(resp_pipe,"ERROR#",strlen("ERROR#"));
             }
-
-
         }
 
         if(strcmp(buffer_req,"READ_FROM_LOGICAL_SPACE_OFFSET")==0)
