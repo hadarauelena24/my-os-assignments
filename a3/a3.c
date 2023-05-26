@@ -18,6 +18,7 @@ int main()
     char buffer_req[BUFFER_SIZE];
     char file_name[BUFFER_SIZE];
     char readdata[BUFFER_SIZE];
+    char rddatasect[BUFFER_SIZE];
     char request;
     unlink(RESP_PIPE_NAME);
     // Crearea pipe-ului de răspuns
@@ -56,6 +57,9 @@ int main()
     unsigned int offsetFile=0,noBytes=0;
     volatile unsigned int* sharedValue=0;
     unsigned int sectionNo=0,offsetSect=0,noBSect=0;
+    int noSections=0;
+    unsigned short hdsz=0;
+    unsigned int offsetSection=0;
     char* data=NULL;
     int sizedata=0;
     int fd=-1;
@@ -180,38 +184,52 @@ int main()
                 readdata[i]=data[i+offsetFile];
             }
             readdata[noBytes]='\0';
-            if(offsetFile>0 && offsetFile<=sizedata && offsetFile+noBytes<=sizedata){
-            memcpy(sharedZone,&readdata,noBytes);
+            if(offsetFile>0 && offsetFile<=sizedata && offsetFile+noBytes<=sizedata)
+            {
+                memcpy(sharedZone,&readdata,noBytes);
 
-            write(resp_pipe,"SUCCESS#",strlen("SUCCESS#"));}
-            else{
+                write(resp_pipe,"SUCCESS#",strlen("SUCCESS#"));
+            }
+            else
+            {
                 write(resp_pipe,"ERROR#",strlen("ERROR#"));
             }
-           // sharedValue=(volatile unsigned int*)((char*)sharedZone+i);
-             //   *sharedValue=value;
-
         }
         if(strcmp(buffer_req,"READ_FROM_FILE_SECTION")==0)
         {
-            write(resp_pipe,"READ_FROM_FILE_SECTION#",strlen("READ_FROM_FILE_SECTION#"));
             read(req_pipe,&sectionNo,sizeof(unsigned int));
             read(req_pipe,&offsetSect,sizeof(unsigned int));
             read(req_pipe,&noBSect,sizeof(unsigned int));
-           /* for(int i=0; i<noBytes; i++)
+            write(resp_pipe,"READ_FROM_FILE_SECTION#",strlen("READ_FROM_FILE_SECTION#"));
+            hdsz= *(unsigned short*)(data + sizedata-4-2);
+            noSections=data[sizedata-hdsz+2];
+            if(sectionNo>1 && sectionNo<=noSections)
             {
-                readdata[i]=data[i+offsetFile];
+                offsetSection=*(unsigned int*)(data+ sizedata-hdsz+3+(sectionNo-1)*17+9);
+                for(int i=0; i<noBSect; i++)
+                {
+                    rddatasect[i]=data[offsetSection+offsetSect+i];
+                }
+                rddatasect[noBSect]='\0';
             }
-            readdata[noBytes]='\0';
-            if(offsetFile>0 && offsetFile<=sizedata && offsetFile+noBytes<=sizedata){
-            memcpy(sharedZone,&readdata,noBytes);
+            if(offsetSection+offsetSect>0 && offsetSection+offsetSect<=sizedata && offsetSection+offsetSect+noBytes<=sizedata)
+            {
+                memcpy(sharedZone,&rddatasect,noBSect);
 
-            write(resp_pipe,"SUCCESS#",strlen("SUCCESS#"));}
-            else{
+                write(resp_pipe,"SUCCESS#",strlen("SUCCESS#"));
+            }
+            else
+            {
                 write(resp_pipe,"ERROR#",strlen("ERROR#"));
-            }*/
-           // sharedValue=(volatile unsigned int*)((char*)sharedZone+i);
-             //   *sharedValue=value;
+            }
 
+
+        }
+
+        if(strcmp(buffer_req,"READ_FROM_LOGICAL_SPACE_OFFSET")==0)
+        {
+            write(resp_pipe,"READ_FROM_LOGICAL_SPACE_OFFSET#",strlen("READ_FROM_LOGICAL_SPACE_OFFSET#"));
+            break;
         }
 
         if(strcmp(buffer_req,"EXIT")==0)
